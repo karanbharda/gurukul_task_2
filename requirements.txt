@@ -1,0 +1,12 @@
+langchain>=0.1.0
+openai>=1.0.0
+faiss-cpu>=1.7.4
+unstructured>=0.10.0
+PyMuPDF>=1.22.3
+pdfminer.six>=20221105
+fastapi>=0.103.0
+uvicorn[standard]>=0.23.0
+pymongo>=4.5.0
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+numpy>=1.24.0

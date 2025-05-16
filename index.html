@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload and Query UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: left;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 700px;
+            width: 90%;
+        }
+        h2 {
+            text-align: center;
+        }
+        input[type="file"], input[type="text"] {
+            margin: 10px 0;
+            width: 100%;
+            padding: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            color: #333;
+            word-wrap: break-word;
+        }
+        .section {
+            margin-bottom: 15px;
+        }
+        .debug-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>File Upload and Query</h2>
+        <div class="section">
+            <h3>Upload File</h3>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.txt">
+            <button onclick="uploadFile()">Upload</button>
+        </div>
+        <div class="section">
+            <h3>Query Content</h3>
+            <input type="text" id="queryInput" placeholder="Enter your query (e.g., What is Karma Yoga?)">
+            <label><input type="checkbox" id="debugMode"> Enable Debug Mode</label>
+            <button onclick="queryContent()">Submit Query</button>
+        </div>
+        <div id="result">No file uploaded yet.</div>
+    </div>
+
+    <script>
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const result = document.getElementById('result');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                result.textContent = 'No file selected.';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                result.textContent = 'Uploading and processing...';
+                const response = await fetch('http://localhost:8000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    result.innerHTML = `File processed successfully!<br>Processed ${data.chunk_count} chunks.<br>${data.message}`;
+                } else {
+                    result.textContent = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                result.textContent = `Error uploading file: ${error.message}`;
+            }
+        }
+
+        async function queryContent() {
+            const queryInput = document.getElementById('queryInput');
+            const debugMode = document.getElementById('debugMode').checked;
+            const result = document.getElementById('result');
+            const query = queryInput.value.trim();
+
+            if (!query) {
+                result.textContent = 'Please enter a query.';
+                return;
+            }
+
+            try {
+                result.textContent = 'Processing query...';
+                const response = await fetch('http://localhost:8000/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, debug: debugMode })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    const lesson = data.lesson;
+                    let output = `
+                        <h3>Lesson Response</h3>
+                        <p><strong>Theme:</strong> ${lesson.theme || 'Not specified'}</p>
+                        <p><strong>Reference Verse(s):</strong> ${lesson.reference_verses.length ? lesson.reference_verses.join(', ') : 'None'}</p>
+                        <p><strong>Explanation:</strong> ${lesson.explanation || 'Not specified'}</p>
+                        <p><strong>Activity/Story-Style Prompt:</strong> ${lesson.activity_prompt || 'Not specified'}</p>
+                    `;
+                    if (debugMode && data.debug_info.length) {
+                        output += '<h4>Debug Information</h4><div class="debug-info">';
+                        data.debug_info.forEach(info => {
+                            output += `
+                                <p><strong>Chunk ID:</strong> ${info.chunk_id}<br>
+                                <strong>Source:</strong> ${info.source}<br>
+                                <strong>Verse:</strong> ${info.verse}<br>
+                                <strong>Content:</strong> ${info.content}<br>
+                                <strong>Similarity Score:</strong> ${info.similarity_score.toFixed(4)}</p>
+                            `;
+                        });
+                        output += '</div>';
+                    }
+                    result.innerHTML = output;
+                } else {
+                    result.textContent = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                result.textContent = `Error processing query: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
